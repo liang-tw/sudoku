@@ -278,9 +278,9 @@
   .sheet{
     background: var(--card);
     width:100%;
-    max-width: 260px;
+    max-width: 300px;
     border-radius: 20px;
-    padding: 10px 12px 14px;
+    padding: 12px 14px 16px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.25);
     transform: scale(0.9);
     opacity: 0;
@@ -293,19 +293,24 @@
   .num-grid{
     display:grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-    margin-bottom: 8px;
+    gap: 8px;
+    margin-bottom: 10px;
   }
   .num-btn{
     aspect-ratio: 1;
-    border-radius: 10px;
+    border-radius: 12px;
     border: 2px solid var(--line);
     background: var(--bg);
     font-family:'Baloo 2', sans-serif;
-    font-size: 15px;
+    font-size: 44px;
+    line-height: 1;
     font-weight:700;
     color: var(--line);
     cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
   }
   .num-btn:active{ background: var(--selected-bg); }
   .sheet-actions{
