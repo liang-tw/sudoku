@@ -70,14 +70,14 @@
   h1{
     font-family:'Baloo 2', sans-serif;
     font-weight:800;
-    font-size: clamp(26px, 4.2vw, 34px);
+    font-size: clamp(34px, 5.6vw, 46px);
     margin:0;
     color: var(--line);
     letter-spacing: 0.5px;
   }
   h1 span{ color: var(--lavender); }
   .tagline{
-    font-size: 13px;
+    font-size: 18px;
     color: var(--ink-soft);
     font-weight:600;
     margin: 2px 0 0;
@@ -240,7 +240,7 @@
   button.big-btn{
     flex:1;
     font-family:'Baloo 2', sans-serif;
-    font-size: 15px;
+    font-size: 20px;
     font-weight:700;
     padding: 14px 6px;
     border-radius: 16px;
@@ -249,6 +249,10 @@
     cursor:pointer;
     box-shadow: 0 5px 0 rgba(0,0,0,0.15);
     transition: transform .08s ease, box-shadow .08s ease;
+    line-height: 1.15;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
   button.big-btn:active{ transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,0.15); }
   .btn-new{ background: var(--lavender); }
@@ -397,7 +401,7 @@
     <div class="stats-bar">
       <div class="stat-pill" id="levelPill">
         <span class="emoji" id="levelEmoji">🐣</span>
-        <span id="levelTitle">小兔新手</span>
+        <span id="levelTitle">小兔幼幼班</span>
       </div>
       <div class="stat-pill static">
         <span class="emoji">✅</span>
@@ -595,10 +599,10 @@
 
   /* ============ Difficulty levels (bunny theme, each with its own progress) ============ */
   const LEVELS = [
-    {key:'novice',      title:'小兔新手', emoji:'🐣', clues:41, unlockAt:15},
-    {key:'detective',   title:'兔兔偵探', emoji:'🥕', clues:36, unlockAt:10},
-    {key:'master',      title:'兔兔達人', emoji:'🎀', clues:32, unlockAt:10},
-    {key:'doctor',      title:'兔兔博士', emoji:'🌸', clues:29, unlockAt:10},
+    {key:'novice',      title:'小兔幼幼班', emoji:'🐣', clues:42, unlockAt:15},
+    {key:'detective',   title:'兔兔小偵探', emoji:'🥕', clues:36, unlockAt:10},
+    {key:'master',      title:'兔兔小達人', emoji:'🎀', clues:32, unlockAt:10},
+    {key:'doctor',      title:'兔兔小博士', emoji:'🌸', clues:29, unlockAt:10},
     {key:'grandmaster', title:'兔兔大師', emoji:'👑', clues:26, unlockAt:5},
   ];
 
