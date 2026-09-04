@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>兔兔數獨樂園</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@500;600;700;800&display=swap');
+
+  :root{
+    --bg: #FFF3F6;
+    --bg-deep: #FFE1EC;
+    --card: #FFFFFF;
+    --ink: #7A3B54;
+    --ink-soft: #B57C93;
+    --line: #E8558F;
+    --given-bg: #FFE9F0;
+    --given-ink: #C13C72;
+    --user-ink: #FF6FA5;
+    --hint-ink: #A96AD6;
+    --hint-bg: #F2E7FB;
+    --error-bg: #FFD3D9;
+    --error-ink: #E4405F;
+    --selected-bg: #FFF0B8;
+    --pink: #FFC2D6;
+    --berry: #E8558F;
+    --cream: #FFE29A;
+    --orange: #FFB25E;
+    --lavender: #B98BDB;
+    --shadow: 0 6px 0 rgba(232,85,143,0.18);
+  }
+
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body{
+    margin:0; padding:0;
+    background: radial-gradient(circle at 15% 8%, var(--bg-deep), var(--bg) 55%);
+    font-family: 'Nunito', system-ui, sans-serif;
+    color: var(--ink);
+    overscroll-behavior: none;
+    -webkit-user-select: none;
+    user-select: none;
+    height: 100%;
+  }
+
+  #app{
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 18px 14px 24px;
+    gap: 14px;
+  }
+
+  .content-col{
+    width: 100%;
+    max-width: 560px;
+    display:flex;
+    flex-direction: column;
+    align-items:center;
+    gap: 14px;
+  }
+
+  /* ---------- Header ---------- */
+  .title-row{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+  }
+  h1{
+    font-family:'Baloo 2', sans-serif;
+    font-weight:800;
+    font-size: clamp(26px, 4.2vw, 34px);
+    margin:0;
+    color: var(--line);
+    letter-spacing: 0.5px;
+  }
+  h1 span{ color: var(--lavender); }
+  .tagline{
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-weight:600;
+    margin: 2px 0 0;
+  }
+
+  .stats-bar{
+    display:flex;
+    gap:10px;
+    width:100%;
+    max-width: 520px;
+    justify-content:center;
+    flex-wrap: wrap;
+  }
+  .stat-pill{
+    background: var(--card);
+    border-radius: 999px;
+    padding: 8px 16px;
+    display:flex;
+    align-items:center;
+    gap:7px;
+    font-weight:700;
+    font-size: 14px;
+    box-shadow: var(--shadow);
+    border: 2px solid var(--line);
+    cursor:pointer;
+  }
+  .stat-pill.static{ cursor:default; }
+  .stat-pill .emoji{ font-size: 18px; }
+  .stat-pill .num{ font-family:'Baloo 2', sans-serif; font-size:16px; color: var(--line);}
+
+  /* ---------- Badge wall / difficulty picker ---------- */
+  .badge-wall{
+    width:100%;
+    max-width: 520px;
+    background: var(--card);
+    border: 2px solid var(--line);
+    border-radius: 18px;
+    padding: 12px 14px;
+    box-shadow: var(--shadow);
+    display:none;
+  }
+  .badge-wall.open{ display:block; }
+  .badge-wall h3{
+    font-family:'Baloo 2', sans-serif;
+    margin: 0 0 4px;
+    font-size: 16px;
+    color: var(--line);
+  }
+  .badge-wall .hint-text{
+    font-size: 11px;
+    color: var(--ink-soft);
+    font-weight:600;
+    margin: 0 0 8px;
+  }
+  .badge-track{
+    display:flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .badge-item{
+    flex: 0 0 auto;
+    width: 82px;
+    text-align:center;
+    padding: 8px 4px;
+    border-radius: 14px;
+    background: var(--bg);
+    border: 3px solid transparent;
+    cursor: pointer;
+  }
+  .badge-item.locked{ opacity: 0.5; }
+  .badge-item.picked{ border-color: var(--berry); background: var(--given-bg); opacity: 1; }
+  .badge-item .b-emoji{ font-size: 26px; display:block; }
+  .badge-item .b-title{ font-size: 11px; font-weight:700; color: var(--ink); line-height:1.2; margin-top:2px; }
+  .badge-item .b-need{ font-size: 10px; color: var(--ink-soft); font-weight:600; }
+  .level-progress{
+    margin-top: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--bg);
+    overflow:hidden;
+    border: 2px solid var(--line);
+  }
+  .level-progress-fill{
+    height:100%;
+    background: linear-gradient(90deg, var(--lavender), var(--pink));
+    width:0%;
+    transition: width .5s ease;
+  }
+  .level-progress-label{
+    font-size: 11px;
+    color: var(--ink-soft);
+    font-weight:700;
+    margin-top:4px;
+    text-align:center;
+  }
+
+  /* ---------- Board ---------- */
+  .board-wrap{
+    background: var(--card);
+    border-radius: 22px;
+    padding: 12px;
+    box-shadow: var(--shadow);
+    border: 3px solid var(--line);
+  }
+  .board{
+    display:grid;
+    grid-template-columns: repeat(9, 1fr);
+    grid-template-rows: repeat(9, 1fr);
+    width: min(88vw, 78vh, 500px);
+    height: min(88vw, 78vh, 500px);
+    background: var(--line);
+    gap:1px;
+    border-radius: 12px;
+    overflow:hidden;
+  }
+  .cell{
+    background: var(--card);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'Baloo 2', sans-serif;
+    font-size: clamp(16px, 3.4vw, 24px);
+    font-weight:700;
+    color: var(--user-ink);
+    cursor:pointer;
+    position:relative;
+    transition: background .15s ease, transform .1s ease;
+  }
+  .cell.given{ background: var(--given-bg); color: var(--given-ink); cursor:default; }
+  .cell.hint{ background: var(--hint-bg); color: var(--hint-ink); }
+  .cell.hint::after{
+    content:'✦';
+    position:absolute;
+    top:2px; right:4px;
+    font-size: 8px;
+    color: var(--hint-ink);
+  }
+  .cell.selected{ background: var(--selected-bg); }
+  .cell.error{ background: var(--error-bg); color: var(--error-ink); animation: shake .35s ease; }
+  .cell.border-r{ border-right: 3px solid var(--line); }
+  .cell.border-b{ border-bottom: 3px solid var(--line); }
+  .cell:active{ transform: scale(0.93); }
+
+  @keyframes shake{
+    0%,100%{ transform: translateX(0); }
+    25%{ transform: translateX(-3px); }
+    75%{ transform: translateX(3px); }
+  }
+
+  /* ---------- Bottom controls ---------- */
+  .controls{
+    display:flex;
+    gap: 10px;
+    width:100%;
+    max-width: 500px;
+  }
+  button.big-btn{
+    flex:1;
+    font-family:'Baloo 2', sans-serif;
+    font-size: 15px;
+    font-weight:700;
+    padding: 14px 6px;
+    border-radius: 16px;
+    border: none;
+    color: white;
+    cursor:pointer;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.15);
+    transition: transform .08s ease, box-shadow .08s ease;
+  }
+  button.big-btn:active{ transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,0.15); }
+  .btn-new{ background: var(--lavender); }
+  .btn-retry{ background: var(--orange); }
+  .btn-done{ background: var(--berry); }
+
+  .msg-banner{
+    max-width: 500px;
+    width:100%;
+    text-align:center;
+    font-weight:700;
+    font-size: 14px;
+    color: var(--ink);
+    min-height: 20px;
+  }
+
+  /* ---------- Number picker sheet (shrunk ~50%) ---------- */
+  .sheet-backdrop{
+    position:fixed; inset:0;
+    background: rgba(122,59,84,0.35);
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    z-index: 50;
+  }
+  .sheet-backdrop.open{ display:flex; }
+  .sheet{
+    background: var(--card);
+    width:100%;
+    max-width: 260px;
+    margin-bottom: 22px;
+    border-radius: 20px;
+    padding: 10px 12px 14px;
+    box-shadow: 0 -4px 18px rgba(0,0,0,0.2);
+    transform: translateY(20px) scale(0.9);
+    opacity: 0;
+    transition: transform .2s ease, opacity .2s ease;
+  }
+  .sheet-backdrop.open .sheet{ transform: translateY(0) scale(1); opacity: 1; }
+  .sheet-handle{
+    width: 30px; height:4px; border-radius: 3px;
+    background: var(--ink-soft); opacity:0.4;
+    margin: 0 auto 8px;
+  }
+  .num-grid{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .num-btn{
+    aspect-ratio: 1;
+    border-radius: 10px;
+    border: 2px solid var(--line);
+    background: var(--bg);
+    font-family:'Baloo 2', sans-serif;
+    font-size: 15px;
+    font-weight:700;
+    color: var(--line);
+    cursor:pointer;
+  }
+  .num-btn:active{ background: var(--selected-bg); }
+  .sheet-actions{
+    display:flex;
+    gap: 6px;
+  }
+  .sheet-actions button{
+    flex:1;
+    font-family:'Baloo 2', sans-serif;
+    font-weight:700;
+    font-size:10.5px;
+    padding: 7px 4px;
+    border-radius: 10px;
+    border: 2px solid var(--line);
+    background: var(--card);
+    color: var(--line);
+    cursor:pointer;
+  }
+  .sheet-actions button.hint-btn{ background: var(--cream); }
+  .sheet-actions button.hint-btn:disabled{ opacity:0.4; }
+  .sheet-actions button.clear-btn{ background: var(--bg); }
+  .sheet-actions button.close-btn{ background: var(--line); color:white; border-color: var(--line); }
+
+  /* ---------- Overlays (celebration / confirm / eye rest) ---------- */
+  .celebrate-overlay{
+    position:fixed; inset:0;
+    background: rgba(122,59,84,0.55);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index: 60;
+    overflow:hidden;
+  }
+  .celebrate-overlay.open{ display:flex; }
+  .celebrate-card{
+    background: var(--card);
+    border-radius: 26px;
+    padding: 32px 28px;
+    text-align:center;
+    max-width: 340px;
+    box-shadow: 0 10px 0 rgba(0,0,0,0.2);
+    z-index:2;
+  }
+  .celebrate-card .big-emoji{ font-size: 54px; display:block; margin-bottom: 6px; }
+  .celebrate-card h2{
+    font-family:'Baloo 2', sans-serif;
+    color: var(--line);
+    margin: 4px 0;
+    font-size: 22px;
+  }
+  .celebrate-card p{ color: var(--ink-soft); font-weight:600; font-size:14px; margin: 6px 0 16px; }
+  .celebrate-card button{
+    font-family:'Baloo 2', sans-serif;
+    font-weight:700;
+    font-size:16px;
+    padding: 12px 26px;
+    border-radius: 14px;
+    border:none;
+    background: var(--berry);
+    color:white;
+    cursor:pointer;
+  }
+  .confetti-piece{
+    position:absolute;
+    top:-10px;
+    width:9px; height:14px;
+    opacity:0.9;
+    animation: fall linear forwards;
+  }
+  @keyframes fall{
+    to{ transform: translateY(110vh) rotate(360deg); }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="content-col">
+
+    <div class="title-row">
+      <h1>兔兔<span>數獨樂園</span></h1>
+    </div>
+    <p class="tagline">動動腦筋，每一格都藏著答案！</p>
+
+    <div class="stats-bar">
+      <div class="stat-pill" id="levelPill">
+        <span class="emoji" id="levelEmoji">🐣</span>
+        <span id="levelTitle">小兔新手</span>
+      </div>
+      <div class="stat-pill static">
+        <span class="emoji">✅</span>
+        <span class="num" id="completedCount">0</span>
+        <span>題完成</span>
+      </div>
+      <div class="stat-pill static">
+        <span class="emoji">💡</span>
+        <span class="num" id="hintCount">3</span>
+        <span>提示</span>
+      </div>
+      <div class="stat-pill static">
+        <span class="emoji">⏱</span>
+        <span class="num" id="timerDisplay">0 分 0 秒</span>
+      </div>
+    </div>
+
+    <div class="badge-wall" id="badgeWall">
+      <h3>難度與獎章牆 🎀</h3>
+      <p class="hint-text">點選圖示可以切換想玩的難度，任何難度都能挑戰</p>
+      <div class="badge-track" id="badgeTrack"></div>
+      <div class="level-progress"><div class="level-progress-fill" id="levelProgressFill"></div></div>
+      <div class="level-progress-label" id="levelProgressLabel"></div>
+    </div>
+
+    <div class="board-wrap">
+      <div class="board" id="board"></div>
+    </div>
+
+    <div class="msg-banner" id="msgBanner"></div>
+
+    <div class="controls">
+      <button class="big-btn btn-new" id="newBtn">🎲 新題目</button>
+      <button class="big-btn btn-retry" id="retryBtn">🔄 清除重來</button>
+      <button class="big-btn btn-done" id="doneBtn">🏁 完成</button>
+    </div>
+
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="sheetBackdrop">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="num-grid" id="numGrid"></div>
+    <div class="sheet-actions">
+      <button class="clear-btn" id="clearBtn">🧽 清除</button>
+      <button class="hint-btn" id="hintBtn">💡 提示 (<span id="hintRemain">3</span>)</button>
+      <button class="close-btn" id="closeSheetBtn">關閉</button>
+    </div>
+  </div>
+</div>
+
+<div class="celebrate-overlay" id="celebrateOverlay">
+  <div class="celebrate-card">
+    <span class="big-emoji" id="celebrateEmoji">🎉</span>
+    <h2 id="celebrateTitle">太棒了！</h2>
+    <p id="celebrateMsg">你解開了這一題數獨！</p>
+    <button id="celebrateCloseBtn">繼續挑戰</button>
+  </div>
+</div>
+
+<div class="celebrate-overlay" id="confirmOverlay">
+  <div class="celebrate-card">
+    <span class="big-emoji">🤔</span>
+    <h2 id="confirmTitle">要換新題目嗎？</h2>
+    <p id="confirmMsg">目前的題目還沒完成喔，換題目會清空目前的填寫。</p>
+    <div style="display:flex; gap:10px;">
+      <button id="confirmCancelBtn" style="background: var(--card); color: var(--line); border: 2px solid var(--line);">再想想</button>
+      <button id="confirmOkBtn">確定</button>
+    </div>
+  </div>
+</div>
+
+<div class="celebrate-overlay" id="eyeRestOverlay">
+  <div class="celebrate-card">
+    <span class="big-emoji">🐰🌸</span>
+    <h2>休息一下眼睛吧</h2>
+    <p id="eyeRestMsg">已經玩了 20 分鐘囉，看看遠方讓眼睛休息一下，再回來繼續挑戰吧！</p>
+    <button id="eyeRestCloseBtn">我知道了</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============ Sudoku generation ============ */
+  function popcount(n){
+    let c=0;
+    while(n){ c += n & 1; n >>= 1; }
+    return c;
+  }
+
+  function shuffle(arr){
+    for(let i=arr.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]] = [arr[j],arr[i]];
+    }
+    return arr;
+  }
+
+  function computeMasks(board){
+    const rowMask = new Array(9).fill(0);
+    const colMask = new Array(9).fill(0);
+    const boxMask = new Array(9).fill(0);
+    for(let i=0;i<81;i++){
+      const v = board[i];
+      if(v){
+        const r = Math.floor(i/9), c = i%9, b = Math.floor(r/3)*3 + Math.floor(c/3);
+        const bit = 1 << (v-1);
+        rowMask[r] |= bit; colMask[c] |= bit; boxMask[b] |= bit;
+      }
+    }
+    return {rowMask, colMask, boxMask};
+  }
+
+  function solve(board, opts){
+    opts = opts || {};
+    const countLimit = opts.countLimit || 1;
+    const randomize = !!opts.randomize;
+    const {rowMask, colMask, boxMask} = computeMasks(board);
+    let solutions = 0;
+    let firstSolution = null;
+
+    function backtrack(){
+      if(solutions >= countLimit) return;
+      let bestIdx = -1, bestCandidates = 0, bestCount = 10;
+      for(let i=0;i<81;i++){
+        if(board[i] === 0){
+          const r = Math.floor(i/9), c = i%9, b = Math.floor(r/3)*3 + Math.floor(c/3);
+          const used = rowMask[r] | colMask[c] | boxMask[b];
+          const avail = (~used) & 0x1FF;
+          const cnt = popcount(avail);
+          if(cnt === 0) return;
+          if(cnt < bestCount){
+            bestCount = cnt; bestIdx = i; bestCandidates = avail;
+            if(cnt === 1) break;
+          }
+        }
+      }
+      if(bestIdx === -1){
+        solutions++;
+        if(!firstSolution) firstSolution = board.slice();
+        return;
+      }
+      let digits = [];
+      for(let d=1; d<=9; d++){ if(bestCandidates & (1 << (d-1))) digits.push(d); }
+      if(randomize) shuffle(digits);
+      const r = Math.floor(bestIdx/9), c = bestIdx%9, b = Math.floor(r/3)*3 + Math.floor(c/3);
+      for(const d of digits){
+        board[bestIdx] = d;
+        const bit = 1 << (d-1);
+        rowMask[r] |= bit; colMask[c] |= bit; boxMask[b] |= bit;
+        backtrack();
+        board[bestIdx] = 0;
+        rowMask[r] &= ~bit; colMask[c] &= ~bit; boxMask[b] &= ~bit;
+        if(solutions >= countLimit) return;
+      }
+    }
+    backtrack();
+    return {count: solutions, solution: firstSolution};
+  }
+
+  function makeSolvedGrid(){
+    const board = new Array(81).fill(0);
+    const {solution} = solve(board, {countLimit:1, randomize:true});
+    return solution;
+  }
+
+  function carvePuzzle(solved, targetClues){
+    const puzzle = solved.slice();
+    const indices = shuffle([...Array(81).keys()]);
+    let clues = 81;
+    for(const idx of indices){
+      if(clues <= targetClues) break;
+      const backup = puzzle[idx];
+      if(backup === 0) continue;
+      puzzle[idx] = 0;
+      const test = puzzle.slice();
+      const {count} = solve(test, {countLimit:2});
+      if(count === 1){
+        clues--;
+      } else {
+        puzzle[idx] = backup;
+      }
+    }
+    return puzzle;
+  }
+
+  function generatePuzzle(targetClues){
+    const solved = makeSolvedGrid();
+    const puzzle = carvePuzzle(solved, targetClues);
+    return {solved, puzzle};
+  }
+
+  /* ============ Difficulty levels (bunny theme, each with its own progress) ============ */
+  const LEVELS = [
+    {key:'novice',      title:'小兔新手', emoji:'🐣', clues:41, unlockAt:5},
+    {key:'detective',   title:'兔兔偵探', emoji:'🥕', clues:36, unlockAt:5},
+    {key:'master',      title:'兔兔達人', emoji:'🎀', clues:32, unlockAt:10},
+    {key:'doctor',      title:'兔兔博士', emoji:'🌸', clues:29, unlockAt:15},
+    {key:'grandmaster', title:'兔兔大師', emoji:'👑', clues:26, unlockAt:15},
+  ];
+
+  function findLevel(key){
+    return LEVELS.find(l => l.key === key) || LEVELS[0];
+  }
+
+  const HINT_QUOTA = 3; // fixed per puzzle layout, does not decay, does not reset on 清除重來
+  const EYE_REST_INTERVAL_MIN = 20; // remind every 20 minutes of session time
+
+  const CELEBRATE_MESSAGES = [
+    '你解開了這一題數獨！',
+    '每一格都對了，你超厲害！',
+    '邏輯思考滿分，繼續保持！',
+    '你是數獨小天才！'
+  ];
+  const ERROR_MESSAGES = [
+    '有幾個格子要再檢查一下喔，你可以的！',
+    '快到了！仔細看看紅色的格子。',
+    '別擔心，再試一次一定行！'
+  ];
+  const INCOMPLETE_MESSAGE = (n) => `還有 ${n} 格空白喔，繼續加油！`;
+
+  /* ============ State ============ */
+  const state = {
+    puzzle: null,      // current cell values shown (0 = empty)
+    solution: null,    // full solved grid
+    given: null,        // boolean[81] true if original clue
+    hintCells: null,    // boolean[81] true if filled via hint (persists across 清除重來)
+    selected: -1,
+    hintsUsed: 0,        // fixed per puzzle layout, resets only on 新題目
+    selectedDifficulty: 'novice',
+    completedByDifficulty: {novice:0, detective:0, master:0, doctor:0, grandmaster:0},
+    sessionStartMs: Date.now(),
+    nextEyeRestMinute: EYE_REST_INTERVAL_MIN,
+  };
+
+  const STORAGE_KEY = 'sudoku-progress';
+
+  function totalCompleted(){
+    return Object.values(state.completedByDifficulty).reduce((a,b) => a+b, 0);
+  }
+
+  async function loadProgress(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        const data = JSON.parse(raw);
+        if(data.completedByDifficulty){
+          LEVELS.forEach(lv => {
+            state.completedByDifficulty[lv.key] = data.completedByDifficulty[lv.key] || 0;
+          });
+        }
+        if(data.selectedDifficulty && findLevel(data.selectedDifficulty)){
+          state.selectedDifficulty = data.selectedDifficulty;
+        }
+      }
+    }catch(e){ /* keep defaults, e.g. private browsing may block storage */ }
+  }
+
+  async function saveProgress(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        completedByDifficulty: state.completedByDifficulty,
+        selectedDifficulty: state.selectedDifficulty
+      }));
+    }catch(e){ /* best effort, e.g. private browsing may block storage */ }
+  }
+
+  /* ============ DOM refs ============ */
+  const boardEl = document.getElementById('board');
+  const msgBanner = document.getElementById('msgBanner');
+  const completedCountEl = document.getElementById('completedCount');
+  const hintCountEl = document.getElementById('hintCount');
+  const timerDisplayEl = document.getElementById('timerDisplay');
+  const levelEmojiEl = document.getElementById('levelEmoji');
+  const levelTitleEl = document.getElementById('levelTitle');
+  const levelPill = document.getElementById('levelPill');
+  const badgeWall = document.getElementById('badgeWall');
+  const badgeTrack = document.getElementById('badgeTrack');
+  const levelProgressFill = document.getElementById('levelProgressFill');
+  const levelProgressLabel = document.getElementById('levelProgressLabel');
+
+  const sheetBackdrop = document.getElementById('sheetBackdrop');
+  const numGrid = document.getElementById('numGrid');
+  const hintBtn = document.getElementById('hintBtn');
+  const hintRemainEl = document.getElementById('hintRemain');
+  const clearBtn = document.getElementById('clearBtn');
+  const closeSheetBtn = document.getElementById('closeSheetBtn');
+
+  const celebrateOverlay = document.getElementById('celebrateOverlay');
+  const celebrateEmoji = document.getElementById('celebrateEmoji');
+  const celebrateTitle = document.getElementById('celebrateTitle');
+  const celebrateMsg = document.getElementById('celebrateMsg');
+  const celebrateCloseBtn = document.getElementById('celebrateCloseBtn');
+
+  const newBtn = document.getElementById('newBtn');
+  const retryBtn = document.getElementById('retryBtn');
+  const doneBtn = document.getElementById('doneBtn');
+  const confirmOverlay = document.getElementById('confirmOverlay');
+  const confirmTitle = document.getElementById('confirmTitle');
+  const confirmMsg = document.getElementById('confirmMsg');
+  const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+  const confirmOkBtn = document.getElementById('confirmOkBtn');
+  let pendingConfirmAction = null;
+
+  const eyeRestOverlay = document.getElementById('eyeRestOverlay');
+  const eyeRestMsg = document.getElementById('eyeRestMsg');
+  const eyeRestCloseBtn = document.getElementById('eyeRestCloseBtn');
+
+  /* ============ Rendering ============ */
+  function buildNumGrid(){
+    numGrid.innerHTML = '';
+    for(let d=1; d<=9; d++){
+      const btn = document.createElement('button');
+      btn.className = 'num-btn';
+      btn.textContent = d;
+      btn.addEventListener('click', () => selectNumber(d));
+      numGrid.appendChild(btn);
+    }
+  }
+
+  function renderBoard(){
+    boardEl.innerHTML = '';
+    for(let i=0;i<81;i++){
+      const r = Math.floor(i/9), c = i%9;
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.idx = i;
+      if(c === 2 || c === 5) cell.classList.add('border-r');
+      if(r === 2 || r === 5) cell.classList.add('border-b');
+      if(state.given[i]) cell.classList.add('given');
+      if(state.hintCells[i]) cell.classList.add('hint');
+      if(state.selected === i) cell.classList.add('selected');
+      const v = state.puzzle[i];
+      cell.textContent = v === 0 ? '' : v;
+      cell.addEventListener('click', () => onCellTap(i));
+      boardEl.appendChild(cell);
+    }
+  }
+
+  function selectDifficulty(key){
+    state.selectedDifficulty = key;
+    saveProgress();
+    updateStatsUI();
+  }
+
+  function updateStatsUI(){
+    completedCountEl.textContent = totalCompleted();
+    const remain = Math.max(0, HINT_QUOTA - state.hintsUsed);
+    hintCountEl.textContent = remain;
+    hintRemainEl.textContent = remain;
+    hintBtn.disabled = remain <= 0;
+
+    const current = findLevel(state.selectedDifficulty);
+    levelEmojiEl.textContent = current.emoji;
+    levelTitleEl.textContent = current.title;
+
+    const currentCount = state.completedByDifficulty[current.key];
+    const unlocked = currentCount >= current.unlockAt;
+    if(!unlocked){
+      levelProgressFill.style.width = Math.min(100, Math.round((currentCount/current.unlockAt)*100)) + '%';
+      levelProgressLabel.textContent = `「${current.title}」再挑戰過關 ${current.unlockAt - currentCount} 題就能拿到獎章！`;
+    } else {
+      levelProgressFill.style.width = '100%';
+      levelProgressLabel.textContent = `「${current.title}」獎章已經拿到囉，太厲害了！`;
+    }
+
+    badgeTrack.innerHTML = '';
+    LEVELS.forEach(lv => {
+      const count = state.completedByDifficulty[lv.key];
+      const unlockedLv = count >= lv.unlockAt;
+      const picked = lv.key === state.selectedDifficulty;
+      const item = document.createElement('div');
+      item.className = 'badge-item' + (unlockedLv ? '' : ' locked') + (picked ? ' picked' : '');
+      item.innerHTML = `<span class="b-emoji">${lv.emoji}</span><span class="b-title">${lv.title}</span><span class="b-need">${unlockedLv ? '已解鎖' : count + '/' + lv.unlockAt + ' 題'}</span>`;
+      item.addEventListener('click', () => selectDifficulty(lv.key));
+      badgeTrack.appendChild(item);
+    });
+  }
+
+  function setMsg(text){
+    msgBanner.textContent = text;
+  }
+
+  /* ============ Timer / eye-rest reminder ============ */
+  function tickTimer(){
+    const elapsedMs = Date.now() - state.sessionStartMs;
+    const totalSeconds = Math.floor(elapsedMs / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    timerDisplayEl.textContent = `${minutes} 分 ${seconds} 秒`;
+    if(minutes >= state.nextEyeRestMinute){
+      showEyeRestReminder(state.nextEyeRestMinute);
+      state.nextEyeRestMinute += EYE_REST_INTERVAL_MIN;
+    }
+  }
+
+  function showEyeRestReminder(minutes){
+    eyeRestMsg.textContent = `已經玩了 ${minutes} 分鐘囉，看看遠方讓眼睛休息一下，再回來繼續挑戰吧！`;
+    eyeRestOverlay.classList.add('open');
+  }
+
+  /* ============ Game flow ============ */
+  async function newPuzzle(){
+    setMsg('');
+    const level = findLevel(state.selectedDifficulty);
+    const {solved, puzzle} = generatePuzzle(level.clues);
+    state.solution = solved;
+    state.puzzle = puzzle.slice();
+    state.given = puzzle.map(v => v !== 0);
+    state.hintCells = new Array(81).fill(false);
+    state.selected = -1;
+    state.hintsUsed = 0;
+    renderBoard();
+    updateStatsUI();
+    await saveProgress();
+  }
+
+  function restartPuzzle(){
+    // same layout & solution; wipe only the numbers the child typed themselves.
+    // hint cells and the hint budget both stay exactly as they were.
+    setMsg('');
+    for(let i=0;i<81;i++){
+      if(!state.given[i] && !state.hintCells[i]) state.puzzle[i] = 0;
+    }
+    state.selected = -1;
+    renderBoard();
+    updateStatsUI();
+  }
+
+  function onCellTap(i){
+    if(state.given[i]) return;
+    state.selected = i;
+    renderBoard();
+    openSheet();
+  }
+
+  function openSheet(){
+    sheetBackdrop.classList.add('open');
+  }
+  function closeSheet(){
+    sheetBackdrop.classList.remove('open');
+  }
+
+  function selectNumber(d){
+    if(state.selected === -1) return;
+    const i = state.selected;
+    state.puzzle[i] = d;
+    if(state.hintCells[i]) state.hintCells[i] = false; // typed over a hint -> treat as normal now
+    closeSheet();
+    renderBoard();
+    setMsg('');
+  }
+
+  function clearSelected(){
+    if(state.selected === -1) return;
+    const i = state.selected;
+    state.puzzle[i] = 0;
+    state.hintCells[i] = false;
+    closeSheet();
+    renderBoard();
+    setMsg('');
+  }
+
+  async function useHint(){
+    if(state.selected === -1) return;
+    const remain = HINT_QUOTA - state.hintsUsed;
+    if(remain <= 0) return;
+    const i = state.selected;
+    state.puzzle[i] = state.solution[i];
+    state.hintCells[i] = true;
+    state.hintsUsed += 1;
+    closeSheet();
+    renderBoard();
+    updateStatsUI();
+  }
+
+  async function onDone(){
+    const emptyCount = state.puzzle.filter(v => v === 0).length;
+    if(emptyCount > 0){
+      setMsg(INCOMPLETE_MESSAGE(emptyCount));
+      return;
+    }
+    const wrong = [];
+    for(let i=0;i<81;i++){
+      if(state.puzzle[i] !== state.solution[i]) wrong.push(i);
+    }
+    if(wrong.length === 0){
+      state.completedByDifficulty[state.selectedDifficulty] += 1;
+      await saveProgress();
+      updateStatsUI();
+      celebrate();
+    } else {
+      document.querySelectorAll('.cell').forEach(el => el.classList.remove('error'));
+      wrong.forEach(idx => {
+        const el = boardEl.querySelector(`[data-idx="${idx}"]`);
+        if(el) el.classList.add('error');
+      });
+      setMsg(ERROR_MESSAGES[Math.floor(Math.random()*ERROR_MESSAGES.length)]);
+    }
+  }
+
+  function celebrate(){
+    const msg = CELEBRATE_MESSAGES[Math.floor(Math.random()*CELEBRATE_MESSAGES.length)];
+    celebrateMsg.textContent = msg;
+    const current = findLevel(state.selectedDifficulty);
+    celebrateEmoji.textContent = current.emoji;
+    celebrateTitle.textContent = '太棒了！';
+    celebrateOverlay.classList.add('open');
+    burstConfetti();
+  }
+
+  function burstConfetti(){
+    const colors = ['#FFC2D6', '#E8558F', '#B98BDB', '#FFE29A', '#FF8FAE'];
+    for(let i=0;i<40;i++){
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      piece.style.left = Math.random()*100 + 'vw';
+      piece.style.background = colors[Math.floor(Math.random()*colors.length)];
+      piece.style.animationDuration = (2 + Math.random()*1.5) + 's';
+      piece.style.animationDelay = (Math.random()*0.4) + 's';
+      piece.style.transform = `rotate(${Math.random()*360}deg)`;
+      celebrateOverlay.appendChild(piece);
+      setTimeout(() => piece.remove(), 4000);
+    }
+  }
+
+  /* ============ Wire up events ============ */
+  function askConfirm(title, msg, action){
+    confirmTitle.textContent = title;
+    confirmMsg.textContent = msg;
+    pendingConfirmAction = action;
+    confirmOverlay.classList.add('open');
+  }
+
+  newBtn.addEventListener('click', () => {
+    if(state.puzzle && state.puzzle.some((v,i) => !state.given[i] && v !== 0)){
+      askConfirm('要換新題目嗎？', '目前的題目還沒完成喔，換一題會重新獲得 3 次提示。', newPuzzle);
+      return;
+    }
+    newPuzzle();
+  });
+  retryBtn.addEventListener('click', () => {
+    if(state.puzzle && state.puzzle.some((v,i) => !state.given[i] && !state.hintCells[i] && v !== 0)){
+      askConfirm('要清除重來嗎？', '這一題自己填的數字會清空，提示過的格子會保留喔。', restartPuzzle);
+      return;
+    }
+    restartPuzzle();
+  });
+  confirmCancelBtn.addEventListener('click', () => { confirmOverlay.classList.remove('open'); pendingConfirmAction = null; });
+  confirmOkBtn.addEventListener('click', () => {
+    confirmOverlay.classList.remove('open');
+    if(pendingConfirmAction) pendingConfirmAction();
+    pendingConfirmAction = null;
+  });
+  doneBtn.addEventListener('click', onDone);
+  clearBtn.addEventListener('click', clearSelected);
+  hintBtn.addEventListener('click', useHint);
+  closeSheetBtn.addEventListener('click', closeSheet);
+  sheetBackdrop.addEventListener('click', (e) => { if(e.target === sheetBackdrop) closeSheet(); });
+  celebrateCloseBtn.addEventListener('click', () => {
+    celebrateOverlay.classList.remove('open');
+    celebrateOverlay.querySelectorAll('.confetti-piece').forEach(p => p.remove());
+    newPuzzle();
+  });
+  eyeRestCloseBtn.addEventListener('click', () => {
+    eyeRestOverlay.classList.remove('open');
+  });
+  levelPill.addEventListener('click', () => badgeWall.classList.toggle('open'));
+
+  /* ============ Init ============ */
+  (async function init(){
+    buildNumGrid();
+    await loadProgress();
+    updateStatsUI();
+    await newPuzzle();
+    setInterval(tickTimer, 1000);
+  })();
+
+})();
+</script>
+</body>
+</html>
