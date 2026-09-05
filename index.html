@@ -103,8 +103,11 @@
     box-shadow: var(--shadow);
     border: 2px solid var(--line);
     cursor:pointer;
+    font-family: 'Nunito', system-ui, sans-serif;
+    color: var(--ink);
   }
   .stat-pill.static{ cursor:default; }
+  .stat-pill:disabled{ opacity:0.45; cursor:default; }
   .stat-pill .emoji{ font-size: 15px; }
   .stat-pill .num{ font-family:'Baloo 2', sans-serif; font-size:13px; color: var(--line);}
   .stat-pill.timer-pill{
@@ -240,17 +243,17 @@
   /* ---------- Bottom controls ---------- */
   .controls{
     display:flex;
-    gap: 6px;
+    gap: 10px;
     width:100%;
     max-width: 620px;
   }
   button.big-btn{
     flex:1;
     font-family:'Baloo 2', sans-serif;
-    font-size: 15px;
+    font-size: 20px;
     font-weight:700;
-    padding: 12px 4px;
-    border-radius: 14px;
+    padding: 14px 6px;
+    border-radius: 16px;
     border: none;
     color: white;
     cursor:pointer;
@@ -266,7 +269,6 @@
   button.big-btn:disabled:active{ transform: none; }
   .btn-new{ background: var(--lavender); }
   .btn-retry{ background: var(--orange); }
-  .btn-clue{ background: var(--teal, #2EC4B6); }
   .btn-done{ background: var(--berry); }
 
   .msg-banner{
@@ -427,6 +429,10 @@
         <span class="num" id="hintCount">3</span>
         <span>提示</span>
       </div>
+      <button class="stat-pill" id="clueBtn">
+        <span class="emoji">🔍</span>
+        <span>線索</span>
+      </button>
     </div>
 
     <div class="badge-wall" id="badgeWall">
@@ -446,7 +452,6 @@
     <div class="controls">
       <button class="big-btn btn-new" id="newBtn">🎲 新題目</button>
       <button class="big-btn btn-retry" id="retryBtn">🔄 清除重來</button>
-      <button class="big-btn btn-clue" id="clueBtn">🔍 線索</button>
       <button class="big-btn btn-done" id="doneBtn">🏁 完成</button>
     </div>
 
@@ -996,7 +1001,10 @@
     pendingConfirmAction = null;
   });
   doneBtn.addEventListener('click', onDone);
-  clueBtn.addEventListener('click', useClue);
+  clueBtn.addEventListener('click', () => {
+    if(state.clueUsed) return;
+    askConfirm('要使用線索嗎？', '線索每一題只能用 1 次，用掉之後這一題就不能再用囉，確定要用嗎？', useClue);
+  });
   clearBtn.addEventListener('click', clearSelected);
   hintBtn.addEventListener('click', useHint);
   closeSheetBtn.addEventListener('click', closeSheet);
