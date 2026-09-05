@@ -107,7 +107,14 @@
   .stat-pill.static{ cursor:default; }
   .stat-pill .emoji{ font-size: 15px; }
   .stat-pill .num{ font-family:'Baloo 2', sans-serif; font-size:13px; color: var(--line);}
-  .stat-pill.timer-pill{ min-width: 108px; justify-content:center; }
+  .stat-pill.timer-pill{
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    min-width: 108px;
+    justify-content:center;
+    z-index: 10;
+  }
   .stat-pill.timer-pill .num{ min-width: 62px; text-align:left; }
 
   /* ---------- Badge wall / difficulty picker ---------- */
@@ -255,6 +262,8 @@
     text-overflow: ellipsis;
   }
   button.big-btn:active{ transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,0.15); }
+  button.big-btn:disabled{ opacity: 0.4; box-shadow: none; }
+  button.big-btn:disabled:active{ transform: none; }
   .btn-new{ background: var(--lavender); }
   .btn-retry{ background: var(--orange); }
   .btn-done{ background: var(--berry); }
@@ -319,14 +328,14 @@
   .num-btn:active{ background: var(--selected-bg); }
   .sheet-actions{
     display:flex;
-    gap: 6px;
+    gap: 5px;
   }
   .sheet-actions button{
     flex:1;
     font-family:'Baloo 2', sans-serif;
     font-weight:700;
-    font-size:12.5px;
-    padding: 7px 4px;
+    font-size:11px;
+    padding: 7px 3px;
     border-radius: 10px;
     border: 2px solid var(--line);
     background: var(--card);
@@ -335,6 +344,8 @@
   }
   .sheet-actions button.hint-btn{ background: var(--cream); }
   .sheet-actions button.hint-btn:disabled{ opacity:0.4; }
+  .sheet-actions button.clue-btn{ background: var(--lavender); color:white; }
+  .sheet-actions button.clue-btn:disabled{ opacity:0.4; }
   .sheet-actions button.clear-btn{ background: var(--bg); }
   .sheet-actions button.close-btn{ background: var(--line); color:white; border-color: var(--line); }
 
@@ -391,6 +402,10 @@
 </head>
 <body>
 <div id="app">
+  <div class="stat-pill static timer-pill" id="timerPill">
+    <span class="emoji">⏱</span>
+    <span class="num" id="timerDisplay">0 分 0 秒</span>
+  </div>
   <div class="content-col">
 
     <div class="title-row">
@@ -412,10 +427,6 @@
         <span class="emoji">💡</span>
         <span class="num" id="hintCount">3</span>
         <span>提示</span>
-      </div>
-      <div class="stat-pill static timer-pill">
-        <span class="emoji">⏱</span>
-        <span class="num" id="timerDisplay">0 分 0 秒</span>
       </div>
     </div>
 
@@ -448,6 +459,7 @@
     <div class="num-grid" id="numGrid"></div>
     <div class="sheet-actions">
       <button class="clear-btn" id="clearBtn">🧽 清除</button>
+      <button class="clue-btn" id="clueBtn">🔍 線索</button>
       <button class="hint-btn" id="hintBtn">💡 提示 (<span id="hintRemain">3</span>)</button>
       <button class="close-btn" id="closeSheetBtn">關閉</button>
     </div>
@@ -599,18 +611,22 @@
 
   /* ============ Difficulty levels (bunny theme, each with its own progress) ============ */
   const LEVELS = [
-    {key:'novice',      title:'小兔幼幼班', emoji:'🐣', clues:42, unlockAt:15},
-    {key:'detective',   title:'兔兔小偵探', emoji:'🥕', clues:36, unlockAt:10},
-    {key:'master',      title:'兔兔小達人', emoji:'🎀', clues:32, unlockAt:10},
-    {key:'doctor',      title:'兔兔小博士', emoji:'🌸', clues:29, unlockAt:10},
-    {key:'grandmaster', title:'兔兔大師', emoji:'👑', clues:26, unlockAt:5},
+    {key:'novice',      title:'小兔幼幼班', emoji:'🐣', clues:42, unlockAt:15, hintQuota:3},
+    {key:'detective',   title:'兔兔小偵探', emoji:'🥕', clues:36, unlockAt:10, hintQuota:3},
+    {key:'master',      title:'兔兔小達人', emoji:'🎀', clues:32, unlockAt:10, hintQuota:4},
+    {key:'doctor',      title:'兔兔小博士', emoji:'🌸', clues:29, unlockAt:10, hintQuota:4},
+    {key:'grandmaster', title:'兔兔大師', emoji:'👑', clues:26, unlockAt:5, hintQuota:5},
   ];
 
   function findLevel(key){
     return LEVELS.find(l => l.key === key) || LEVELS[0];
   }
 
-  const HINT_QUOTA = 3; // fixed per puzzle layout, does not decay, does not reset on 清除重來
+  function currentHintQuota(){
+    return findLevel(state.selectedDifficulty).hintQuota;
+  }
+
+  const CLUE_QUOTA = 1; // fixed, one 線索 check per puzzle layout regardless of difficulty
   const EYE_REST_INTERVAL_MIN = 20; // remind every 20 minutes of session time
 
   const CELEBRATE_MESSAGES = [
@@ -633,7 +649,9 @@
     given: null,        // boolean[81] true if original clue
     hintCells: null,    // boolean[81] true if filled via hint (persists across 清除重來)
     selected: -1,
-    hintsUsed: 0,        // fixed per puzzle layout, resets only on 新題目
+    hintsUsed: 0,        // per puzzle layout, quota depends on difficulty, resets only on 新題目
+    clueUsed: false,     // 線索 check, 1 use per puzzle layout, resets only on 新題目
+    errorMarks: null,    // boolean[81], cells flagged wrong by 線索 (or by 完成), cleared when that cell is edited
     selectedDifficulty: 'novice',
     completedByDifficulty: {novice:0, detective:0, master:0, doctor:0, grandmaster:0},
     sessionStartMs: Date.now(),
@@ -702,6 +720,7 @@
   const newBtn = document.getElementById('newBtn');
   const retryBtn = document.getElementById('retryBtn');
   const doneBtn = document.getElementById('doneBtn');
+  const clueBtn = document.getElementById('clueBtn');
   const confirmOverlay = document.getElementById('confirmOverlay');
   const confirmTitle = document.getElementById('confirmTitle');
   const confirmMsg = document.getElementById('confirmMsg');
@@ -736,6 +755,7 @@
       if(r === 2 || r === 5) cell.classList.add('border-b');
       if(state.given[i]) cell.classList.add('given');
       if(state.hintCells[i]) cell.classList.add('hint');
+      if(state.errorMarks[i]) cell.classList.add('error');
       if(state.selected === i) cell.classList.add('selected');
       const v = state.puzzle[i];
       cell.textContent = v === 0 ? '' : v;
@@ -752,10 +772,11 @@
 
   function updateStatsUI(){
     completedCountEl.textContent = totalCompleted();
-    const remain = Math.max(0, HINT_QUOTA - state.hintsUsed);
+    const remain = Math.max(0, currentHintQuota() - state.hintsUsed);
     hintCountEl.textContent = remain;
     hintRemainEl.textContent = remain;
     hintBtn.disabled = remain <= 0;
+    clueBtn.disabled = state.clueUsed;
 
     const current = findLevel(state.selectedDifficulty);
     levelEmojiEl.textContent = current.emoji;
@@ -815,8 +836,10 @@
     state.puzzle = puzzle.slice();
     state.given = puzzle.map(v => v !== 0);
     state.hintCells = new Array(81).fill(false);
+    state.errorMarks = new Array(81).fill(false);
     state.selected = -1;
     state.hintsUsed = 0;
+    state.clueUsed = false;
     renderBoard();
     updateStatsUI();
     await saveProgress();
@@ -824,11 +847,12 @@
 
   function restartPuzzle(){
     // same layout & solution; wipe only the numbers the child typed themselves.
-    // hint cells and the hint budget both stay exactly as they were.
+    // hint cells and the hint/線索 budgets all stay exactly as they were.
     setMsg('');
     for(let i=0;i<81;i++){
       if(!state.given[i] && !state.hintCells[i]) state.puzzle[i] = 0;
     }
+    state.errorMarks = new Array(81).fill(false);
     state.selected = -1;
     renderBoard();
     updateStatsUI();
@@ -853,6 +877,7 @@
     const i = state.selected;
     state.puzzle[i] = d;
     if(state.hintCells[i]) state.hintCells[i] = false; // typed over a hint -> treat as normal now
+    state.errorMarks[i] = false; // edited -> clear any 線索/完成 error flag until checked again
     closeSheet();
     renderBoard();
     setMsg('');
@@ -863,6 +888,7 @@
     const i = state.selected;
     state.puzzle[i] = 0;
     state.hintCells[i] = false;
+    state.errorMarks[i] = false;
     closeSheet();
     renderBoard();
     setMsg('');
@@ -870,12 +896,26 @@
 
   async function useHint(){
     if(state.selected === -1) return;
-    const remain = HINT_QUOTA - state.hintsUsed;
+    const remain = currentHintQuota() - state.hintsUsed;
     if(remain <= 0) return;
     const i = state.selected;
     state.puzzle[i] = state.solution[i];
     state.hintCells[i] = true;
+    state.errorMarks[i] = false;
     state.hintsUsed += 1;
+    closeSheet();
+    renderBoard();
+    updateStatsUI();
+  }
+
+  function useClue(){
+    if(state.clueUsed) return;
+    state.clueUsed = true;
+    for(let i=0;i<81;i++){
+      if(!state.given[i] && state.puzzle[i] !== 0 && state.puzzle[i] !== state.solution[i]){
+        state.errorMarks[i] = true;
+      }
+    }
     closeSheet();
     renderBoard();
     updateStatsUI();
@@ -897,11 +937,8 @@
       updateStatsUI();
       celebrate();
     } else {
-      document.querySelectorAll('.cell').forEach(el => el.classList.remove('error'));
-      wrong.forEach(idx => {
-        const el = boardEl.querySelector(`[data-idx="${idx}"]`);
-        if(el) el.classList.add('error');
-      });
+      wrong.forEach(idx => { state.errorMarks[idx] = true; });
+      renderBoard();
       setMsg(ERROR_MESSAGES[Math.floor(Math.random()*ERROR_MESSAGES.length)]);
     }
   }
@@ -960,6 +997,7 @@
     pendingConfirmAction = null;
   });
   doneBtn.addEventListener('click', onDone);
+  clueBtn.addEventListener('click', useClue);
   clearBtn.addEventListener('click', clearSelected);
   hintBtn.addEventListener('click', useHint);
   closeSheetBtn.addEventListener('click', closeSheet);
