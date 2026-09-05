@@ -240,17 +240,17 @@
   /* ---------- Bottom controls ---------- */
   .controls{
     display:flex;
-    gap: 10px;
+    gap: 6px;
     width:100%;
     max-width: 620px;
   }
   button.big-btn{
     flex:1;
     font-family:'Baloo 2', sans-serif;
-    font-size: 20px;
+    font-size: 15px;
     font-weight:700;
-    padding: 14px 6px;
-    border-radius: 16px;
+    padding: 12px 4px;
+    border-radius: 14px;
     border: none;
     color: white;
     cursor:pointer;
@@ -266,6 +266,7 @@
   button.big-btn:disabled:active{ transform: none; }
   .btn-new{ background: var(--lavender); }
   .btn-retry{ background: var(--orange); }
+  .btn-clue{ background: var(--teal, #2EC4B6); }
   .btn-done{ background: var(--berry); }
 
   .msg-banner{
@@ -328,14 +329,14 @@
   .num-btn:active{ background: var(--selected-bg); }
   .sheet-actions{
     display:flex;
-    gap: 5px;
+    gap: 6px;
   }
   .sheet-actions button{
     flex:1;
     font-family:'Baloo 2', sans-serif;
     font-weight:700;
-    font-size:11px;
-    padding: 7px 3px;
+    font-size:12.5px;
+    padding: 7px 4px;
     border-radius: 10px;
     border: 2px solid var(--line);
     background: var(--card);
@@ -344,8 +345,6 @@
   }
   .sheet-actions button.hint-btn{ background: var(--cream); }
   .sheet-actions button.hint-btn:disabled{ opacity:0.4; }
-  .sheet-actions button.clue-btn{ background: var(--lavender); color:white; }
-  .sheet-actions button.clue-btn:disabled{ opacity:0.4; }
   .sheet-actions button.clear-btn{ background: var(--bg); }
   .sheet-actions button.close-btn{ background: var(--line); color:white; border-color: var(--line); }
 
@@ -447,6 +446,7 @@
     <div class="controls">
       <button class="big-btn btn-new" id="newBtn">🎲 新題目</button>
       <button class="big-btn btn-retry" id="retryBtn">🔄 清除重來</button>
+      <button class="big-btn btn-clue" id="clueBtn">🔍 線索</button>
       <button class="big-btn btn-done" id="doneBtn">🏁 完成</button>
     </div>
 
@@ -459,7 +459,6 @@
     <div class="num-grid" id="numGrid"></div>
     <div class="sheet-actions">
       <button class="clear-btn" id="clearBtn">🧽 清除</button>
-      <button class="clue-btn" id="clueBtn">🔍 線索</button>
       <button class="hint-btn" id="hintBtn">💡 提示 (<span id="hintRemain">3</span>)</button>
       <button class="close-btn" id="closeSheetBtn">關閉</button>
     </div>
