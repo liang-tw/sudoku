@@ -769,9 +769,19 @@
   }
 
   function selectDifficulty(key){
-    state.selectedDifficulty = key;
-    saveProgress();
-    updateStatsUI();
+    if(key === state.selectedDifficulty) return;
+    const hasProgress = state.puzzle && state.puzzle.some((v,i) => !state.given[i] && v !== 0);
+    if(hasProgress){
+      askConfirm('要切換難度嗎？', '難度即將改變，會放棄目前這一局並重新出一題新的，確定要切換嗎？', () => {
+        state.selectedDifficulty = key;
+        saveProgress();
+        newPuzzle();
+      });
+    } else {
+      state.selectedDifficulty = key;
+      saveProgress();
+      newPuzzle();
+    }
   }
 
   function updateStatsUI(){
